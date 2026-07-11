@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  /* Frosted Telemetry palette — deep slate/navy base, not flat black.
+     Keeps the mono font reserved for THE MATH (raw metrics, WPA, GOAT
+     Score), a direct callback to zeroresidual.dev's identity, while
+     headings/prose use a geometric sans so the fan-facing surface
+     doesn't read as a terminal. */
+  --bg-base: #0a0e17;
+  --bg-panel: rgba(255, 255, 255, 0.04);
+  --bg-panel-hover: rgba(255, 255, 255, 0.07);
+  --border-soft: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text-primary: #eef1f8;
+  --text-muted: #8b93a7;
+  --text-faint: #565d70;
+  --accent-gold: #c8a96e;
+  --tier-s: #e8c874;
+  --tier-a-plus: #7fd8a8;
+  --tier-a: #6fb8e0;
+  --tier-b: #9a9fb0;
+  --tier-c: #b0793f;
+  --tier-f: #7a5a5a;
+}
+
+body {
+  background: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(120, 150, 220, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(200, 169, 110, 0.06), transparent);
+  color: var(--text-primary);
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+.mono {
+  font-family: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+}
+
+.glass-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-panel-hover:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-strong);
+}
