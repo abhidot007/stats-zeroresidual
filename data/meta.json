@@ -1,0 +1,59 @@
+{
+  "season_range": [
+    2008,
+    2026
+  ],
+  "batting_tier_bands": [
+    {
+      "tier": "S",
+      "floor": 80.0
+    },
+    {
+      "tier": "A+",
+      "floor": 71.0
+    },
+    {
+      "tier": "A",
+      "floor": 64.0
+    },
+    {
+      "tier": "B",
+      "floor": 50.0
+    },
+    {
+      "tier": "C",
+      "floor": 35.0
+    },
+    {
+      "tier": "F",
+      "floor": null
+    }
+  ],
+  "bowling_tier_bands": [
+    {
+      "tier": "S",
+      "floor": 73.0
+    },
+    {
+      "tier": "A+",
+      "floor": 63.0
+    },
+    {
+      "tier": "A",
+      "floor": 59.0
+    },
+    {
+      "tier": "B",
+      "floor": 39.0
+    },
+    {
+      "tier": "C",
+      "floor": 26.0
+    },
+    {
+      "tier": "F",
+      "floor": null
+    }
+  ],
+  "generated_by": "src/export/export_web_data.py"
+}
