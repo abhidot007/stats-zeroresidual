@@ -1,7 +1,9 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { LineChart as TrendIcon, Undo2 } from "lucide-react";
 import TierBadge from "./TierBadge";
 import MeasureRadar from "./MeasureRadar";
+import SeasonTrendPanel from "./SeasonTrendPanel";
 import { franchiseGlow } from "../lib/franchiseColors";
 import { BATTING_AXES, BOWLING_AXES } from "../lib/radarAxes";
 
@@ -57,7 +59,13 @@ function Metric({ label, value, decimals = 2, signed = false }) {
   );
 }
 
-export default function ScoutCard({ player, battingRows = [], bowlingRows = [] }) {
+export default function ScoutCard({
+  player,
+  battingRows = [],
+  bowlingRows = [],
+  battingSeasonRows = [],
+  bowlingSeasonRows = [],
+}) {
   const hasBatting = battingRows.length > 0;
   const hasBowling = bowlingRows.length > 0;
 
@@ -65,6 +73,22 @@ export default function ScoutCard({ player, battingRows = [], bowlingRows = [] }
   const [battingRole, setBattingRole] = useState(battingRows[0]?.role);
   const [bowlerType, setBowlerType] = useState(bowlingRows[0]?.bowler_type);
   const [statMode, setStatMode] = useState("Reality"); // "Myth" | "Reality" — batting only
+
+  // Flip-card reveal for the season-trend chart. `flipPulse` drives a
+  // quick rotateY 0->90->0 animation; the face swaps at the 90-degree
+  // midpoint (edge-on to the viewer, so the swap itself is invisible),
+  // giving the illusion of a two-sided card without needing to maintain
+  // two absolutely-positioned faces of possibly different heights.
+  const [showTrend, setShowTrend] = useState(false);
+  const [flipPulse, setFlipPulse] = useState(false);
+
+  function handleFlip() {
+    setFlipPulse(true);
+    setTimeout(() => {
+      setShowTrend((s) => !s);
+      setFlipPulse(false);
+    }, 180);
+  }
 
   const activeRow = useMemo(() => {
     if (discipline === "Batting") {
@@ -111,7 +135,15 @@ export default function ScoutCard({ player, battingRows = [], bowlingRows = [] }
               </div>
             )}
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <button
+              onClick={handleFlip}
+              title={showTrend ? "back to card" : "season trends"}
+              className="p-1.5 rounded-full transition-colors duration-150 glass-panel glass-panel-hover"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {showTrend ? <Undo2 size={14} /> : <TrendIcon size={14} />}
+            </button>
             <TierBadge tier={activeRow.tier} discipline={discipline} />
           </div>
         </div>
@@ -148,53 +180,75 @@ export default function ScoutCard({ player, battingRows = [], bowlingRows = [] }
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
           >
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <div className="mono text-3xl font-semibold" style={{ color: "var(--accent-gold)" }}>
-                  {goatScore?.toFixed(1) ?? "—"}
-                </div>
-                <div className="text-xs" style={{ color: "var(--text-faint)" }}>
-                  {isBatting ? "GOAT Score (as a batsman)" : "Bowling GOAT Score"}
-                </div>
-              </div>
-              {isBatting && (
-                <SegmentToggle
-                  options={["Reality", "Myth"]}
-                  active={statMode}
-                  onChange={setStatMode}
-                />
-              )}
-            </div>
-
-            <MeasureRadar data={radarData} height={185} />
-
-            <div className="grid grid-cols-3 gap-x-3 gap-y-4 mt-5 pt-5" style={{ borderTop: "1px solid var(--border-soft)" }}>
-              {isBatting ? (
-                statMode === "Reality" ? (
-                  <>
-                    <Metric label="WPA (vs. era baseline)" value={activeRow.overall_z_wpa} signed />
-                    <Metric label="true avg (era-adjusted)" value={activeRow.career_true_avg} signed />
-                    <Metric label="true SR (era-adjusted)" value={activeRow.career_true_sr} signed />
-                    <Metric label="legacy score" value={activeRow.legacy_score} decimals={1} />
-                    <Metric label="durability" value={activeRow.durability_points} decimals={1} />
-                  </>
+            <div style={{ perspective: 1200 }}>
+              <motion.div
+                animate={{ rotateY: flipPulse ? 90 : 0 }}
+                transition={{ duration: 0.18, ease: "easeIn" }}
+                style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
+              >
+                {showTrend ? (
+                  <div className="flex flex-col" style={{ minHeight: 340 }}>
+                    <SeasonTrendPanel
+                      key={discipline}
+                      seasonRows={isBatting ? battingSeasonRows : bowlingSeasonRows}
+                      discipline={discipline}
+                      roleKey={isBatting ? "role" : "bowler_type"}
+                      activeRoleValue={isBatting ? activeRow.role : activeRow.bowler_type}
+                    />
+                  </div>
                 ) : (
                   <>
-                    <Metric label="career average (broadcast)" value={activeRow.myth_average} />
-                    <Metric label="strike rate (broadcast)" value={activeRow.myth_strike_rate} />
-                    <Metric label="legacy score" value={activeRow.legacy_score} decimals={1} />
+                    <div className="flex items-center justify-between mb-5">
+                      <div>
+                        <div className="mono text-3xl font-semibold" style={{ color: "var(--accent-gold)" }}>
+                          {goatScore?.toFixed(1) ?? "—"}
+                        </div>
+                        <div className="text-xs" style={{ color: "var(--text-faint)" }}>
+                          {isBatting ? "GOAT Score (as a batsman)" : "Bowling GOAT Score"}
+                        </div>
+                      </div>
+                      {isBatting && (
+                        <SegmentToggle
+                          options={["Reality", "Myth"]}
+                          active={statMode}
+                          onChange={setStatMode}
+                        />
+                      )}
+                    </div>
+
+                    <MeasureRadar data={radarData} height={185} />
+
+                    <div className="grid grid-cols-3 gap-x-3 gap-y-4 mt-5 pt-5" style={{ borderTop: "1px solid var(--border-soft)" }}>
+                      {isBatting ? (
+                        statMode === "Reality" ? (
+                          <>
+                            <Metric label="WPA (vs. era baseline)" value={activeRow.overall_z_wpa} signed />
+                            <Metric label="true avg (era-adjusted)" value={activeRow.career_true_avg} signed />
+                            <Metric label="true SR (era-adjusted)" value={activeRow.career_true_sr} signed />
+                            <Metric label="legacy score" value={activeRow.legacy_score} decimals={1} />
+                            <Metric label="durability" value={activeRow.durability_points} decimals={1} />
+                          </>
+                        ) : (
+                          <>
+                            <Metric label="career average (broadcast)" value={activeRow.myth_average} />
+                            <Metric label="strike rate (broadcast)" value={activeRow.myth_strike_rate} />
+                            <Metric label="legacy score" value={activeRow.legacy_score} decimals={1} />
+                          </>
+                        )
+                      ) : (
+                        <>
+                          <Metric label="WPA (vs. era baseline)" value={activeRow.overall_bowler_z_wpa} signed />
+                          <Metric label="true average" value={activeRow.career_true_average} signed />
+                          <Metric label="true economy" value={activeRow.career_true_economy} signed />
+                          <Metric label="true strike rate" value={activeRow.career_true_strike_rate} signed />
+                          <Metric label="legacy score" value={activeRow.legacy_score} decimals={1} />
+                          <Metric label="durability" value={activeRow.durability_points} decimals={1} />
+                        </>
+                      )}
+                    </div>
                   </>
-                )
-              ) : (
-                <>
-                  <Metric label="WPA (vs. era baseline)" value={activeRow.overall_bowler_z_wpa} signed />
-                  <Metric label="true average" value={activeRow.career_true_average} signed />
-                  <Metric label="true economy" value={activeRow.career_true_economy} signed />
-                  <Metric label="true strike rate" value={activeRow.career_true_strike_rate} signed />
-                  <Metric label="legacy score" value={activeRow.legacy_score} decimals={1} />
-                  <Metric label="durability" value={activeRow.durability_points} decimals={1} />
-                </>
-              )}
+                )}
+              </motion.div>
             </div>
           </motion.div>
         </AnimatePresence>

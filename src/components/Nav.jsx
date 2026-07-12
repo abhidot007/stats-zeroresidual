@@ -6,7 +6,7 @@ export default function Nav({ view, onChange }) {
   ];
 
   return (
-    <nav className="flex items-center gap-2 mb-10">
+    <nav className="flex flex-wrap items-center gap-2 mb-10">
       {tabs.map((t) => (
         <button
           key={t.key}

@@ -1,8 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { Radar, LineChart as TrendIcon } from "lucide-react";
 import PlayerSearch from "./PlayerSearch";
 import TierBadge from "./TierBadge";
 import ComparisonRadar from "./ComparisonRadar";
+import HeadToHeadSeasonTrend from "./HeadToHeadSeasonTrend";
+import CopyLinkButton from "./CopyLinkButton";
 import { BATTING_AXES, BOWLING_AXES } from "../lib/radarAxes";
+import { getUrlParams, updateUrlParams } from "../lib/urlState";
 
 // `signed` metrics are era-adjusted deviations (zero-centered — positive
 // means better than baseline, negative means worse), so they get a "+"
@@ -94,6 +98,23 @@ function RoleSubToggle({ rows, roleKey, active, onChange }) {
   );
 }
 
+function PanelToggle({ active, onClick, icon: Icon, label }) {
+  return (
+    <button
+      onClick={onClick}
+      className="mono text-xs px-3 py-1.5 rounded-full transition-colors duration-150 flex items-center gap-1.5"
+      style={{
+        background: active ? "var(--accent-gold)" : "var(--bg-panel)",
+        border: `1px solid ${active ? "var(--accent-gold)" : "var(--border-soft)"}`,
+        color: active ? "#0a0e17" : "var(--text-muted)",
+      }}
+    >
+      <Icon size={12} />
+      {label}
+    </button>
+  );
+}
+
 function PlayerSlot({ label, allNames, name, setName, rows, roleKey, activeRole, setActiveRole }) {
   return (
     <div className="flex-1 min-w-[240px]">
@@ -118,20 +139,46 @@ function PlayerSlot({ label, allNames, name, setName, rows, roleKey, activeRole,
   );
 }
 
-export default function HeadToHead({ allNames, battingByPlayer, bowlingByPlayer }) {
-  const [discipline, setDiscipline] = useState("Batting");
-  const [nameA, setNameA] = useState(null);
-  const [nameB, setNameB] = useState(null);
+export default function HeadToHead({
+  allNames,
+  battingByPlayer,
+  bowlingByPlayer,
+  battingSeasonByPlayer,
+  bowlingSeasonByPlayer,
+}) {
+  const initialParams = getUrlParams();
+  const [discipline, setDiscipline] = useState(
+    initialParams.get("discipline") === "Bowling" ? "Bowling" : "Batting"
+  );
+  const [nameA, setNameA] = useState(initialParams.get("a") || null);
+  const [nameB, setNameB] = useState(initialParams.get("b") || null);
   const [roleA, setRoleA] = useState(null);
   const [roleB, setRoleB] = useState(null);
+  const [showRadar, setShowRadar] = useState(true);
+  const [showTrend, setShowTrend] = useState(true);
+
+  // Mirror the comparison into the URL so it's shareable — same pattern
+  // as App.jsx's player deep-linking, scoped to this component since only
+  // Head-to-Head cares about a/b/discipline.
+  useEffect(() => {
+    updateUrlParams({
+      discipline: discipline === "Batting" ? null : discipline,
+      a: nameA || null,
+      b: nameB || null,
+    });
+  }, [discipline, nameA, nameB]);
 
   const isBatting = discipline === "Batting";
   const byPlayer = isBatting ? battingByPlayer : bowlingByPlayer;
+  const seasonByPlayer = isBatting ? battingSeasonByPlayer : bowlingSeasonByPlayer;
   const roleKey = isBatting ? "role" : "bowler_type";
   const metrics = isBatting ? BATTING_METRICS : BOWLING_METRICS;
 
   const rowsA = nameA ? byPlayer.get(nameA) ?? [] : [];
   const rowsB = nameB ? byPlayer.get(nameB) ?? [] : [];
+
+  const seasonRowsA = nameA ? seasonByPlayer.get(nameA) ?? [] : [];
+  const seasonRowsB = nameB ? seasonByPlayer.get(nameB) ?? [] : [];
 
   const activeRowA = useMemo(
     () => rowsA.find((r) => r[roleKey] === roleA) ?? rowsA[0],
@@ -214,18 +261,46 @@ export default function HeadToHead({ allNames, battingByPlayer, bowlingByPlayer 
       </div>
 
       {activeRowA && activeRowB && (
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <PanelToggle active={showRadar} onClick={() => setShowRadar((v) => !v)} icon={Radar} label="shape comparison" />
+          <PanelToggle active={showTrend} onClick={() => setShowTrend((v) => !v)} icon={TrendIcon} label="season trajectory" />
+        </div>
+      )}
+
+      {activeRowA && activeRowB && showRadar && (
         <div className="glass-panel rounded-2xl p-6 mb-6">
-          <div className="mono text-xs mb-2" style={{ color: "var(--text-faint)" }}>
-            shape comparison · z-scored measures, same [-3, 3] scale as the scout card
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="mono text-xs" style={{ color: "var(--text-faint)" }}>
+              shape comparison · z-scored measures, same [-3, 3] scale as the scout card
+            </div>
+            <CopyLinkButton label="copy link to this matchup" />
           </div>
           <ComparisonRadar data={radarData} labelA={nameA} labelB={nameB} />
+        </div>
+      )}
+
+      {activeRowA && activeRowB && showTrend && (
+        <div className="glass-panel rounded-2xl p-6 mb-6">
+          <div className="mono text-xs mb-4" style={{ color: "var(--text-faint)" }}>
+            season trajectory · pick a measure to compare across careers
+          </div>
+          <HeadToHeadSeasonTrend
+            seasonRowsA={seasonRowsA}
+            seasonRowsB={seasonRowsB}
+            discipline={discipline}
+            roleKey={roleKey}
+            roleValueA={activeRowA[roleKey]}
+            roleValueB={activeRowB[roleKey]}
+            labelA={nameA}
+            labelB={nameB}
+          />
         </div>
       )}
 
       {activeRowA && activeRowB && (
         <div className="glass-panel rounded-2xl overflow-hidden">
           <div
-            className="grid px-6 py-4"
+            className="grid px-3 sm:px-6 py-4"
             style={{ gridTemplateColumns: "1fr 2fr 1fr", borderBottom: "1px solid var(--border-soft)" }}
           >
             <div className="flex justify-start"><TierBadge tier={activeRowA.tier} size="sm" discipline={discipline} /></div>

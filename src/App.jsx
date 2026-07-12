@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useIplData } from "./lib/useIplData";
+import { getUrlParams, updateUrlParams } from "./lib/urlState";
 import Nav from "./components/Nav";
 import PlayerSearch from "./components/PlayerSearch";
 import ScoutCard from "./components/ScoutCard";
@@ -7,6 +8,7 @@ import Leaderboard from "./components/Leaderboard";
 import HeadToHead from "./components/HeadToHead";
 import InspectEngine from "./components/InspectEngine";
 import UserGuide from "./components/UserGuide";
+import CopyLinkButton from "./components/CopyLinkButton";
 
 function SiteHeader({ meta, align = "center" }) {
   return (
@@ -50,15 +52,32 @@ export default function App() {
     bowling,
     battingByPlayer,
     bowlingByPlayer,
+    battingSeasonByPlayer,
+    bowlingSeasonByPlayer,
     meta,
     allNames,
   } = useIplData();
-  const [activePlayer, setActivePlayer] = useState(null);
-  const [view, setView] = useState("search");
+  const initialParams = getUrlParams();
+  const [activePlayer, setActivePlayerState] = useState(initialParams.get("player") || null);
+  const [view, setViewState] = useState(initialParams.get("view") || "search");
+
+  // Every navigation action funnels through these three setters, each of
+  // which also mirrors the change into the URL — so at any point the
+  // address bar is a valid, shareable link to exactly what's on screen.
+  function setView(next) {
+    setViewState(next);
+    updateUrlParams({ view: next === "search" ? null : next });
+  }
+
+  function setActivePlayer(name) {
+    setActivePlayerState(name);
+    updateUrlParams({ player: name || null });
+  }
 
   function goToPlayer(name) {
-    setActivePlayer(name);
-    setView("search");
+    setActivePlayerState(name);
+    setViewState("search");
+    updateUrlParams({ player: name || null, view: null });
   }
 
   if (loading) {
@@ -84,7 +103,7 @@ export default function App() {
   const isSearch = view === "search";
 
   return (
-    <div className="min-h-screen px-6 py-16">
+    <div className="min-h-screen px-4 sm:px-6 py-10 sm:py-16">
       {isSearch ? (
         <div className="max-w-6xl mx-auto grid lg:grid-cols-[minmax(0,380px)_1fr] gap-x-16 gap-y-10 items-start">
           <div className="lg:sticky lg:top-16 flex flex-col items-center lg:items-start text-center lg:text-left">
@@ -102,11 +121,18 @@ export default function App() {
 
           <div className="flex justify-center lg:justify-start lg:pt-2" style={{ paddingLeft: "10px" }}>
             {activePlayer && (
-              <ScoutCard
-                player={activePlayer}
-                battingRows={battingByPlayer.get(activePlayer) ?? []}
-                bowlingRows={bowlingByPlayer.get(activePlayer) ?? []}
-              />
+              <div className="w-full max-w-md">
+                <div className="flex justify-end mb-3">
+                  <CopyLinkButton label="copy link to this card" />
+                </div>
+                <ScoutCard
+                  player={activePlayer}
+                  battingRows={battingByPlayer.get(activePlayer) ?? []}
+                  bowlingRows={bowlingByPlayer.get(activePlayer) ?? []}
+                  battingSeasonRows={battingSeasonByPlayer.get(activePlayer) ?? []}
+                  bowlingSeasonRows={bowlingSeasonByPlayer.get(activePlayer) ?? []}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -124,6 +150,8 @@ export default function App() {
               allNames={allNames}
               battingByPlayer={battingByPlayer}
               bowlingByPlayer={bowlingByPlayer}
+              battingSeasonByPlayer={battingSeasonByPlayer}
+              bowlingSeasonByPlayer={bowlingSeasonByPlayer}
             />
           )}
         </div>

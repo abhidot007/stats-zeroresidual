@@ -126,60 +126,65 @@ export default function Leaderboard({ batting, bowling, onSelectPlayer }) {
         </FilterPill>
       </div>
 
-      <div className="glass-panel rounded-2xl overflow-hidden">
-        <div
-          className="grid text-xs mono px-5 py-3"
-          style={{
-            gridTemplateColumns: `2fr 1fr 0.6fr ${columns.map(() => "1fr").join(" ")}`,
-            borderBottom: "1px solid var(--border-soft)",
-            color: "var(--text-faint)",
-          }}
-        >
-          <div>player</div>
-          <div>{isBatting ? "role" : "type"}</div>
-          <div>tier</div>
-          {columns.map((c) => (
-            <button
-              key={c.key}
-              onClick={() => toggleSort(c.key === "goat_score" ? scoreKey : c.key)}
-              className="text-left transition-colors duration-150"
-              style={{
-                color: (sortKey === c.key || (c.key === "goat_score" && sortKey === scoreKey))
-                  ? "var(--accent-gold)"
-                  : "var(--text-faint)",
-              }}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        {rows.length === 0 && (
-          <div className="px-5 py-8 text-sm text-center" style={{ color: "var(--text-faint)" }}>
-            no players match these filters
-          </div>
-        )}
-
-        {rows.map((row) => (
-          <button
-            key={`${row.player}-${row[roleKey]}`}
-            onClick={() => onSelectPlayer(row.player)}
-            className="w-full grid items-center px-5 py-3 text-left transition-colors duration-150 glass-panel-hover"
+      {/* Fixed multi-column grid doesn't reflow on narrow viewports, so
+          below the sm breakpoint we let it scroll horizontally within a
+          min-width wrapper instead of squishing every column illegibly. */}
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="glass-panel rounded-2xl overflow-hidden min-w-[640px]">
+          <div
+            className="grid text-xs mono px-5 py-3"
             style={{
               gridTemplateColumns: `2fr 1fr 0.6fr ${columns.map(() => "1fr").join(" ")}`,
               borderBottom: "1px solid var(--border-soft)",
+              color: "var(--text-faint)",
             }}
           >
-            <div style={{ color: "var(--text-primary)" }}>{row.player}</div>
-            <div className="text-sm" style={{ color: "var(--text-muted)" }}>{row[roleKey]}</div>
-            <div><TierBadge tier={row.tier} size="sm" discipline={discipline} /></div>
+            <div>player</div>
+            <div>{isBatting ? "role" : "type"}</div>
+            <div>tier</div>
             {columns.map((c) => (
-              <div key={c.key} className="mono text-sm" style={{ color: "var(--text-muted)" }}>
-                {typeof row[c.key] === "number" ? row[c.key].toFixed(2) : "—"}
-              </div>
+              <button
+                key={c.key}
+                onClick={() => toggleSort(c.key === "goat_score" ? scoreKey : c.key)}
+                className="text-left transition-colors duration-150"
+                style={{
+                  color: (sortKey === c.key || (c.key === "goat_score" && sortKey === scoreKey))
+                    ? "var(--accent-gold)"
+                    : "var(--text-faint)",
+                }}
+              >
+                {c.label}
+              </button>
             ))}
-          </button>
-        ))}
+          </div>
+
+          {rows.length === 0 && (
+            <div className="px-5 py-8 text-sm text-center" style={{ color: "var(--text-faint)" }}>
+              no players match these filters
+            </div>
+          )}
+
+          {rows.map((row) => (
+            <button
+              key={`${row.player}-${row[roleKey]}`}
+              onClick={() => onSelectPlayer(row.player)}
+              className="w-full grid items-center px-5 py-3 text-left transition-colors duration-150 glass-panel-hover"
+              style={{
+                gridTemplateColumns: `2fr 1fr 0.6fr ${columns.map(() => "1fr").join(" ")}`,
+                borderBottom: "1px solid var(--border-soft)",
+              }}
+            >
+              <div style={{ color: "var(--text-primary)" }}>{row.player}</div>
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>{row[roleKey]}</div>
+              <div><TierBadge tier={row.tier} size="sm" discipline={discipline} /></div>
+              {columns.map((c) => (
+                <div key={c.key} className="mono text-sm" style={{ color: "var(--text-muted)" }}>
+                  {typeof row[c.key] === "number" ? row[c.key].toFixed(2) : "—"}
+                </div>
+              ))}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

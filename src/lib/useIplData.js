@@ -19,6 +19,8 @@ export function useIplData() {
     bowling: [],
     battingByPlayer: new Map(),
     bowlingByPlayer: new Map(),
+    battingSeasonByPlayer: new Map(),
+    bowlingSeasonByPlayer: new Map(),
     meta: null,
     allNames: [],
   });
@@ -26,26 +28,40 @@ export function useIplData() {
   useEffect(() => {
     let cancelled = false;
 
+    function groupBy(rows, keyFn) {
+      const map = new Map();
+      for (const row of rows) {
+        const key = keyFn(row);
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(row);
+      }
+      return map;
+    }
+
     async function load() {
       try {
         const base = import.meta.env.BASE_URL;
-        const [batting, bowling, meta] = await Promise.all([
+        // Season-by-season files back the career-trajectory chart on the
+        // Scout Card. They're best-effort: older exports of this pipeline
+        // may not have them yet, so a 404 here degrades to an empty trend
+        // (chart just doesn't render) rather than breaking the whole page.
+        const fetchOptional = (path) =>
+          fetch(`${base}${path}`)
+            .then((r) => (r.ok ? r.json() : []))
+            .catch(() => []);
+
+        const [batting, bowling, meta, battingSeason, bowlingSeason] = await Promise.all([
           fetch(`${base}data/batting_leaderboard.json`).then((r) => r.json()),
           fetch(`${base}data/bowling_leaderboard.json`).then((r) => r.json()),
           fetch(`${base}data/meta.json`).then((r) => r.json()),
+          fetchOptional("data/batting_by_season.json"),
+          fetchOptional("data/bowling_by_season.json"),
         ]);
 
-        const battingByPlayer = new Map();
-        for (const row of batting) {
-          if (!battingByPlayer.has(row.player)) battingByPlayer.set(row.player, []);
-          battingByPlayer.get(row.player).push(row);
-        }
-
-        const bowlingByPlayer = new Map();
-        for (const row of bowling) {
-          if (!bowlingByPlayer.has(row.player)) bowlingByPlayer.set(row.player, []);
-          bowlingByPlayer.get(row.player).push(row);
-        }
+        const battingByPlayer = groupBy(batting, (r) => r.player);
+        const bowlingByPlayer = groupBy(bowling, (r) => r.player);
+        const battingSeasonByPlayer = groupBy(battingSeason, (r) => r.player);
+        const bowlingSeasonByPlayer = groupBy(bowlingSeason, (r) => r.player);
 
         const allNames = Array.from(
           new Set([...battingByPlayer.keys(), ...bowlingByPlayer.keys()])
@@ -59,6 +75,8 @@ export function useIplData() {
             bowling,
             battingByPlayer,
             bowlingByPlayer,
+            battingSeasonByPlayer,
+            bowlingSeasonByPlayer,
             meta,
             allNames,
           });
